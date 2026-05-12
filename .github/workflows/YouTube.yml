@@ -289,7 +289,7 @@ jobs:
                   "$URL"
                 ;;
               8)
-                # android client last resort (limited to low quality without PO token — only used if all else fails)
+                # android client last resort
                 yt-dlp \
                   --proxy "socks5://127.0.0.1:1080" \
                   --format "$FORMAT" \
@@ -386,7 +386,6 @@ jobs:
             fi
             case $METHOD in
               1)
-                # web client + deno JS solver + remote EJS components (best quality, needs challenge solving)
                 yt-dlp \
                   --proxy "socks5://127.0.0.1:1080" \
                   --format "$FORMAT" \
@@ -399,7 +398,6 @@ jobs:
                   "$URL"
                 ;;
               2)
-                # web client + deno + remote EJS via NPM fallback
                 yt-dlp \
                   --proxy "socks5://127.0.0.1:1080" \
                   --format "$FORMAT" \
@@ -412,7 +410,6 @@ jobs:
                   "$URL"
                 ;;
               3)
-                # web+mweb+android_vr combined + deno + remote EJS
                 yt-dlp \
                   --proxy "socks5://127.0.0.1:1080" \
                   --format "$FORMAT" \
@@ -423,7 +420,6 @@ jobs:
                   "$URL"
                 ;;
               4)
-                # mweb client via proxy
                 yt-dlp \
                   --proxy "socks5://127.0.0.1:1080" \
                   --format "$FORMAT" \
@@ -432,7 +428,6 @@ jobs:
                   "$URL"
                 ;;
               5)
-                # android_vr client via proxy
                 yt-dlp \
                   --proxy "socks5://127.0.0.1:1080" \
                   --format "$FORMAT" \
@@ -441,7 +436,6 @@ jobs:
                   "$URL"
                 ;;
               6)
-                # web client no-proxy + deno + remote EJS
                 yt-dlp \
                   --format "$FORMAT" \
                   $COMMON_FLAGS \
@@ -451,7 +445,6 @@ jobs:
                   "$URL"
                 ;;
               7)
-                # mweb no-proxy
                 yt-dlp \
                   --format "$FORMAT" \
                   $COMMON_FLAGS \
@@ -459,7 +452,6 @@ jobs:
                   "$URL"
                 ;;
               8)
-                # android client last resort
                 yt-dlp \
                   --proxy "socks5://127.0.0.1:1080" \
                   --format "$FORMAT" \
@@ -471,13 +463,10 @@ jobs:
             esac
           }
 
-          # Function to normalize YouTube URLs
           normalize_youtube_url() {
             local INPUT_URL="$1"
-            # Convert youtu.be short URLs to standard youtube.com format
             if [[ "$INPUT_URL" =~ youtu\.be/([a-zA-Z0-9_-]+) ]]; then
               VIDEO_ID="${BASH_REMATCH[1]}"
-              # Remove any query parameters from video ID
               VIDEO_ID="${VIDEO_ID%%\?*}"
               echo "https://www.youtube.com/watch?v=${VIDEO_ID}"
             else
@@ -488,8 +477,6 @@ jobs:
           URL_INDEX=0
           for URL in "${URL_LIST[@]}"; do
             URL_INDEX=$((URL_INDEX + 1))
-
-            # Normalize YouTube URL (convert short URLs to standard format)
             URL=$(normalize_youtube_url "$URL")
 
             echo ""
@@ -509,7 +496,6 @@ jobs:
               if download_video $METHOD "$URL" "$TMP_DIR"; then
                 echo "Download successful with method $METHOD!"
 
-                # ── Quality gate: reject the download if resolution is too low ──
                 QUALITY_OK=true
                 if [ "$QUALITY" != "best" ] && [ "$QUALITY" != "audio" ]; then
                   for DOWNLOADED_FILE in "$TMP_DIR"/*.mp4 "$TMP_DIR"/*.webm "$TMP_DIR"/*.mkv; do
@@ -527,7 +513,6 @@ jobs:
                     fi
                   done
                 elif [ "$QUALITY" = "best" ]; then
-                  # For "best", reject if we only got format 18 (360p fallback) — sign of failed challenge solving
                   for DOWNLOADED_FILE in "$TMP_DIR"/*.mp4 "$TMP_DIR"/*.webm "$TMP_DIR"/*.mkv; do
                     [ -f "$DOWNLOADED_FILE" ] || continue
                     ACTUAL_HEIGHT=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$DOWNLOADED_FILE" 2>/dev/null || echo "unknown")
@@ -544,7 +529,6 @@ jobs:
                   DOWNLOAD_SUCCESS=true
                   break
                 else
-                  # Quality not acceptable, but preserve thumbnail if it exists before cleaning up
                   THUMB_TEMP=$(ls "$TMP_DIR"/*.jpg 2>/dev/null | head -1)
                   if [ -n "$THUMB_TEMP" ] && [ -f "$THUMB_TEMP" ]; then
                     mkdir -p "/tmp/saved_thumbnails_$"
@@ -560,13 +544,6 @@ jobs:
 
             if [ "$DOWNLOAD_SUCCESS" = false ]; then
               echo "❌ All download methods failed for URL: $URL — skipping."
-
-              # Check if we saved a thumbnail during quality rejection attempts
-              if [ -f "/tmp/saved_thumbnails_$/thumb_${URL_INDEX}.jpg" ]; then
-                echo "📌 Found saved thumbnail, will use it anyway"
-                # We'll handle this in the file processing section
-              fi
-
               rm -rf "$TMP_DIR"
               continue
             fi
@@ -577,12 +554,9 @@ jobs:
             echo "Files in $TMP_DIR:"
             ls -la "$TMP_DIR/"
 
-            # ── Process each downloaded file ──────────────────────────────────
             FILE_INDEX=0
             for FILE in "$TMP_DIR"/*; do
               [ -f "$FILE" ] || continue
-
-              # Skip thumbnail files - we'll handle them separately
               if [[ "$FILE" == *.jpg ]] || [[ "$FILE" == *.webp ]]; then
                 continue
               fi
@@ -604,7 +578,6 @@ jobs:
               mkdir -p "$BACKUP_DIR/${FINAL_FOLDER_NAME}"
               echo "Created backup folder: $BACKUP_DIR/${FINAL_FOLDER_NAME}"
 
-              # ── Handle thumbnail (downloaded alongside video) ─────────────────
               THUMB_FILE=$(ls "$TMP_DIR"/*.jpg 2>/dev/null | head -1)
               if [ -n "$THUMB_FILE" ] && [ -f "$THUMB_FILE" ]; then
                 cp "$THUMB_FILE" "$BACKUP_DIR/${FINAL_FOLDER_NAME}/thumbnail.jpg"
@@ -666,7 +639,6 @@ jobs:
                   printf '%s\n' "# ${FILENAME_NO_EXT}"
                   printf '%s\n' ""
 
-                  # Add thumbnail if it exists
                   if [ -f "$BACKUP_DIR/${FINAL_FOLDER_NAME}/thumbnail.jpg" ]; then
                     THUMB_ENCODED=$(urlencode "thumbnail.jpg")
                     THUMB_RAW_LINK="https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/${BRANCH}/videos/${FOLDER_ENCODED}/${THUMB_ENCODED}"
@@ -731,7 +703,7 @@ jobs:
                   printf '%s\n' ""
                   printf '%s\n' "---"
                   printf '%s\n' ""
-                  printf '%s\n' "*This tool created by Shayan Khodadadian*"
+                  printf '%s\n' "*This tool created by [Shayan Khodadadian.ir]*"
                 } > "$README_FILE"
 
                 echo "Created README.md"
@@ -753,7 +725,6 @@ jobs:
                     printf '%s\n' "# ${FILENAME_NO_EXT}"
                     printf '%s\n' ""
 
-                    # Add thumbnail if it exists
                     if [ -f "$BACKUP_DIR/${FINAL_FOLDER_NAME}/thumbnail.jpg" ]; then
                       THUMB_ENCODED=$(urlencode "thumbnail.jpg")
                       THUMB_RAW_LINK="https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/${BRANCH}/videos/${FOLDER_ENCODED}/${THUMB_ENCODED}"
@@ -801,7 +772,7 @@ jobs:
                     printf '%s\n' ""
                     printf '%s\n' "---"
                     printf '%s\n' ""
-                    printf '%s\n' "*This tool created by Shayan Khodadadian*"
+                    printf '%s\n' "*This tool created by [Shayan Khodadadian.ir]*"
                   } > "$README_FILE"
 
                   echo "Created password-protected zip archive and README.md"
@@ -820,7 +791,6 @@ jobs:
                     printf '%s\n' "# ${FILENAME_NO_EXT}"
                     printf '%s\n' ""
 
-                    # Add thumbnail if it exists
                     if [ -f "$BACKUP_DIR/${FINAL_FOLDER_NAME}/thumbnail.jpg" ]; then
                       THUMB_ENCODED=$(urlencode "thumbnail.jpg")
                       THUMB_RAW_LINK="https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/${BRANCH}/videos/${FOLDER_ENCODED}/${THUMB_ENCODED}"
@@ -861,7 +831,7 @@ jobs:
                     printf '%s\n' ""
                     printf '%s\n' "---"
                     printf '%s\n' ""
-                    printf '%s\n' "*This tool created by Shayan Khodadadian*"
+                    printf '%s\n' "*This tool created by [Shayan Khodadadian.ir]*"
                   } > "$README_FILE"
 
                   echo "Copied file and created README.md"
@@ -873,7 +843,6 @@ jobs:
             echo ""
             echo "✅ Finished URL $URL_INDEX / $TOTAL_URLS"
           done
-          # ── End of URL loop ──────────────────────────────────────────────────
 
           echo ""
           echo "===== Backup folder contents ====="
@@ -884,15 +853,6 @@ jobs:
       - name: دانلود زیرنویس ها
         if: ${{ github.event.inputs.download_subtitles == 'true' }}
         run: |
-          # ──────────────────────────────────────────────────────────────────────
-          # SUBTITLE DOWNLOADER
-          # • Downloads original subtitles (all languages) if they exist
-          # • Downloads Persian (fa) subtitles — or auto-translates if missing
-          # • Saves everything to: videos/<video_folder>/subtitle/
-          # • IMPORTANT: Errors in subtitle download will NOT stop video from being pushed
-          # ──────────────────────────────────────────────────────────────────────
-
-          # Disable exit on error - subtitle failures should NOT stop the workflow
           set +e
 
           BACKUP_DIR=$(cat /tmp/backup_dir_path.txt)
@@ -1015,28 +975,41 @@ jobs:
           docker stop warp || true
           docker rm warp || true
 
-      - name: ذخیره سازی دانلود شده ها
+      - name: ذخیره سازی و ایجاد پوشه videos در ریپازیتوری
         run: |
           BRANCH="${GITHUB_REF_NAME}"
           REPO_OWNER="${{ github.repository_owner }}"
           REPO_NAME="${{ github.event.repository.name }}"
 
-          echo "Shayan Khodadadian - Incremental Push Mode"
           BACKUP_DIR=$(cat /tmp/backup_dir_path.txt)
           BACKUP_FILE_COUNT=$(find "$BACKUP_DIR" -type f 2>/dev/null | wc -l)
 
-          if [ "$BACKUP_FILE_COUNT" -eq 0 ]; then
-            echo "No files to push. Exiting."
-            exit 0
-          fi
-
+          # تابع برای urlencode
           urlencode() {
             python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$1"
           }
 
+          # همگام‌سازی با ریپو
+          git fetch origin "$BRANCH"
+          git reset --hard origin/"$BRANCH"
+
+          # اطمینان از وجود پوشه videos و فایل README در آن
+          mkdir -p videos
+
+          # کپی فایل‌های دانلود شده از مسیر موقت به پوشه videos
+          if [ "$BACKUP_FILE_COUNT" -gt 0 ]; then
+            cp -r "$BACKUP_DIR"/* videos/
+          fi
+
+          # بازسازی فهرست اصلی ویدیوها
           regenerate_master_readme() {
             MASTER_README="videos/README.md"
-            { echo "# DOWNLOADED VIDEOS LIST :"; echo ""; echo "----"; echo ""; } > "$MASTER_README"
+
+            echo "# 🎬 DOWNLOADED VIDEOS LIST" > "$MASTER_README"
+            echo "" >> "$MASTER_README"
+            echo "----" >> "$MASTER_README"
+            echo "" >> "$MASTER_README"
+
             VIDEO_EMOJIS=("🎬" "🎥" "📽️" "🎞️" "📺" "🎦" "▶️")
             NUM=0
             for folder in videos/*/; do
@@ -1049,19 +1022,22 @@ jobs:
               FOLDER_LINK="https://github.com/${REPO_OWNER}/${REPO_NAME}/tree/${BRANCH}/videos/${FOLDER_ENCODED}"
               printf -- "- %s - %s [%s](%s)\n" "$NUM" "$RANDOM_EMOJI" "$FOLDER_NAME" "$FOLDER_LINK" >> "$MASTER_README"
             done
+
+            # اگر هیچ ویدیویی وجود ندارد، یک پیام مناسب بگذار
+            if [ "$NUM" -eq 0 ]; then
+              echo "هنوز ویدیویی دانلود نشده است. لینک ویدیو را وارد کنید." >> "$MASTER_README"
+            fi
           }
 
-          git fetch origin "$BRANCH"
-          git reset --hard origin/"$BRANCH"
-          mkdir -p videos
-          cp -r "$BACKUP_DIR"/* videos/
-
-          git add -A videos/
           regenerate_master_readme
+
+          # اضافه کردن فایل‌ها به گیت
+          git add -A videos/
           git add videos/README.md
 
+          # کامیت و پوش (حتی اگر تغییری نکرده باشد، در صورت نبود پوشه قبلی این کار ضروری است)
           if ! git diff --cached --quiet; then
-            git commit -m "[SHAYAN] YouTube download [skip ci]"
+            git commit -m "[Shayan Khodadadian] YouTube download [skip ci]"
             PUSH_RETRY=0
             while [ $PUSH_RETRY -lt 10 ]; do
               PUSH_RETRY=$((PUSH_RETRY + 1))
@@ -1074,16 +1050,20 @@ jobs:
                 git fetch origin "$BRANCH"
                 git reset --hard origin/"$BRANCH"
                 mkdir -p videos
-                cp -r "$BACKUP_DIR"/* videos/
-                git add -A videos/
+                if [ "$BACKUP_FILE_COUNT" -gt 0 ]; then
+                  cp -r "$BACKUP_DIR"/* videos/
+                fi
                 regenerate_master_readme
+                git add -A videos/
                 git add videos/README.md
-                git diff --cached --quiet || git commit -m "[SHAYAN] YouTube download [skip ci]"
+                git diff --cached --quiet || git commit -m "[Shayan Khodadadian] YouTube download [skip ci]"
               fi
             done
+          else
+            echo "No changes to commit, but videos folder is already present."
           fi
 
           echo "=========================================="
           echo "All files pushed successfully!"
-          echo "Created with ❤️ (Shayan Khodadadian)"
+          echo "Created with ❤️ by Shayan Khodadadian "
           echo "=========================================="
