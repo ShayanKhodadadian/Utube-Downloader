@@ -42,7 +42,6 @@ jobs:
       - name: بررسی اولیه
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: آماده سازی گیت برای فایلهای بزرگ
@@ -143,7 +142,7 @@ jobs:
           > /tmp/video_info.txt
 
           echo "Video Getter"
-          echo "Shayan Khodadadian"
+          echo "https://avasam.ir"
           echo ""
           echo "Total URLs to download: $TOTAL_URLS"
           echo "Quality: $QUALITY"
@@ -703,7 +702,7 @@ jobs:
                   printf '%s\n' ""
                   printf '%s\n' "---"
                   printf '%s\n' ""
-                  printf '%s\n' "*This tool created by [Shayan Khodadadian.ir]*"
+                  printf '%s\n' "*This tool created by [avasam.ir](https://avasam.ir)*"
                 } > "$README_FILE"
 
                 echo "Created README.md"
@@ -772,7 +771,7 @@ jobs:
                     printf '%s\n' ""
                     printf '%s\n' "---"
                     printf '%s\n' ""
-                    printf '%s\n' "*This tool created by [Shayan Khodadadian.ir]*"
+                    printf '%s\n' "*This tool created by [avasam.ir](https://avasam.ir)*"
                   } > "$README_FILE"
 
                   echo "Created password-protected zip archive and README.md"
@@ -831,7 +830,7 @@ jobs:
                     printf '%s\n' ""
                     printf '%s\n' "---"
                     printf '%s\n' ""
-                    printf '%s\n' "*This tool created by [Shayan Khodadadian.ir]*"
+                    printf '%s\n' "*This tool created by [avasam.ir](https://avasam.ir)*"
                   } > "$README_FILE"
 
                   echo "Copied file and created README.md"
@@ -1035,9 +1034,9 @@ jobs:
           git add -A videos/
           git add videos/README.md
 
-          # کامیت و پوش (حتی اگر تغییری نکرده باشد، در صورت نبود پوشه قبلی این کار ضروری است)
+          # کامیت و پوش
           if ! git diff --cached --quiet; then
-            git commit -m "[Shayan Khodadadian] YouTube download [skip ci]"
+            git commit -m "[AVASAM] YouTube download [skip ci]"
             PUSH_RETRY=0
             while [ $PUSH_RETRY -lt 10 ]; do
               PUSH_RETRY=$((PUSH_RETRY + 1))
@@ -1056,7 +1055,7 @@ jobs:
                 regenerate_master_readme
                 git add -A videos/
                 git add videos/README.md
-                git diff --cached --quiet || git commit -m "[Shayan Khodadadian] YouTube download [skip ci]"
+                git diff --cached --quiet || git commit -m "[AVASAM] YouTube download [skip ci]"
               fi
             done
           else
@@ -1065,5 +1064,5 @@ jobs:
 
           echo "=========================================="
           echo "All files pushed successfully!"
-          echo "Created with ❤️ by Shayan Khodadadian "
+          echo "Created with ❤️ by AVASAM (https://avasam.ir)"
           echo "=========================================="
