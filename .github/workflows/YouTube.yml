@@ -1,4 +1,4 @@
-name: 02 - 🎬 دانلود یوتیوب
+name: 🎬 دانلود یوتیوب
 
 on:
   workflow_dispatch:
